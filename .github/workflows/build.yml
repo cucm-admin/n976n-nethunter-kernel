@@ -41,10 +41,22 @@ jobs:
           sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' arch/arm64/configs/d2xks_defconfig
           sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' arch/arm64/configs/d2xks_defconfig
 
-          # 3) Makefile 패치:
-          #   - prepare-compiler-check 검사 무력화 (대시 셸 문법 에러 및 빌드 중단 방지)
-          #   - 어셈블러 충돌 유발 플래그(-march=armv8-a+lse) 제거
+          # 3) Makefile 패치 (검사 무력화 및 하드코딩 플래그 정리)
           python3 -c "import re; f=open('Makefile'); c=f.read(); f.close(); c=re.sub(r'prepare-compiler-check:\s*FORCE[\s\S]*?\t@:', 'prepare-compiler-check: FORCE\n\t@:', c).replace('-Xassembler -march=armv8-a+lse','').replace('-march=armv8-a+lse',''); f=open('Makefile','w'); f.write(c); f.close()"
+
+          # 4) Clang이 ARM64 전용 어셈블러(as)와 링커(ld)를 찾을 수 있도록 툴체인 심볼릭 링크 연결
+          python3 -c "
+          import os, glob
+          gcc_bin = os.path.abspath('toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9/bin')
+          for f in glob.glob(gcc_bin + '/aarch64-linux-android-*'):
+              gnu_name = f.replace('aarch64-linux-android-', 'aarch64-linux-gnu-')
+              if not os.path.lexists(gnu_name):
+                  os.symlink(f, gnu_name)
+          for alias in ['as', 'ld']:
+              target = os.path.join(gcc_bin, alias)
+              if not os.path.lexists(target):
+                  os.symlink(os.path.join(gcc_bin, 'aarch64-linux-android-' + alias), target)
+          "
 
       - name: 4. SM-N976N 커널 컴파일 실행
         run: |
