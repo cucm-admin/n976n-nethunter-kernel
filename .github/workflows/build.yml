@@ -44,19 +44,14 @@ jobs:
           # 3) Makefile 패치 (검사 무력화 및 하드코딩 플래그 정리)
           python3 -c "import re; f=open('Makefile'); c=f.read(); f.close(); c=re.sub(r'prepare-compiler-check:\s*FORCE[\s\S]*?\t@:', 'prepare-compiler-check: FORCE\n\t@:', c).replace('-Xassembler -march=armv8-a+lse','').replace('-march=armv8-a+lse',''); f=open('Makefile','w'); f.write(c); f.close()"
 
-          # 4) Clang이 ARM64 전용 어셈블러(as)와 링커(ld)를 찾을 수 있도록 툴체인 심볼릭 링크 연결
-          python3 -c "
-          import os, glob
-          gcc_bin = os.path.abspath('toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9/bin')
-          for f in glob.glob(gcc_bin + '/aarch64-linux-android-*'):
-              gnu_name = f.replace('aarch64-linux-android-', 'aarch64-linux-gnu-')
-              if not os.path.lexists(gnu_name):
-                  os.symlink(f, gnu_name)
-          for alias in ['as', 'ld']:
-              target = os.path.join(gcc_bin, alias)
-              if not os.path.lexists(target):
-                  os.symlink(os.path.join(gcc_bin, 'aarch64-linux-android-' + alias), target)
-          "
+          # 4) 툴체인 디렉터리 내 ARM64 바이너리 심볼릭 링크 생성 (Clang 타깃 이름 매칭)
+          cd toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9/bin
+          for f in aarch64-linux-android-*; do
+            ln -sf "$f" "${f/aarch64-linux-android-/aarch64-linux-gnu-}"
+          done
+          ln -sf aarch64-linux-android-as as
+          ln -sf aarch64-linux-android-ld ld
+          cd -
 
       - name: 4. SM-N976N 커널 컴파일 실행
         run: |
