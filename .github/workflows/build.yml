@@ -23,7 +23,7 @@ jobs:
           git clone --depth=1 https://github.com/KernelSU-Next/KernelSU-Next.git KernelSU-Next
           git clone --depth=1 https://github.com/CruelKernel/samsung-exynos9820-toolchain.git toolchain
 
-      - name: 3. AR9271 드라이버 주입 및 빌드 안전검사/플래그 패치
+      - name: 3. AR9271 드라이버 주입 및 빌드 에러 패치
         run: |
           cd kernel
           # 1) AR9271 외장 무선 드라이버 활성화
@@ -41,20 +41,32 @@ jobs:
           sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' arch/arm64/configs/d2xks_defconfig
           sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' arch/arm64/configs/d2xks_defconfig
 
-          # 3) LSE Atomics 비활성화 (표준 LL/SC 모드로 전환)
-          sed -i 's/CONFIG_ARM64_LSE_ATOMICS=y/# CONFIG_ARM64_LSE_ATOMICS is not set/' arch/arm64/configs/d2xks_defconfig
-          sed -i 's/CONFIG_SEC_ARM64_LSE_ATOMICS=y/# CONFIG_SEC_ARM64_LSE_ATOMICS is not set/' arch/arm64/configs/d2xks_defconfig
+          # 3) 호스트에 없는 NPU 펌웨어 빌드 차단 (make: No rule to make target NPU.bin 방지)
+          sed -i 's/CONFIG_EXTRA_FIRMWARE="npu\/NPU.bin"/CONFIG_EXTRA_FIRMWARE=""/' arch/arm64/configs/d2xks_defconfig
+          sudo mkdir -p /lib/firmware/npu && sudo touch /lib/firmware/npu/NPU.bin
 
-          # 4) olog.pb.h 누락 헤더 해결 (삼성 공식 더미 헤더로 교체)
+          # 4) olog.pb.h 누락 헤더 해결
           cp drivers/kperfmon/ologk.h include/linux/ologk.h
 
-          # 5) NPU 버전 정보 누락 파일 해결 (삼성 공식 기본 파일로 교체)
+          # 5) NPU 버전 정보 누락 파일 해결
           cp drivers/vision/npu/generated/npu-ver-info-default.c drivers/vision/npu/generated/npu-ver-info.c
 
-          # 6) Makefile 패치 (검사 무력화 및 하드코딩 플래그 정리)
+          # 6) LSE 아토믹 어셈블러 지원 활성화 (Error: selected processor does not support 'casa' 해결)
+          python3 -c "
+          with open('arch/arm64/include/asm/lse.h', 'r') as f:
+              c = f.read()
+          c = c.replace('#ifndef __clang__\n.arch_extension\tlse\n#endif', '.arch_extension\tlse')
+          c = c.replace('#ifndef __clang__\r\n.arch_extension\tlse\r\n#endif', '.arch_extension\tlse')
+          c = c.replace('#ifndef __clang__\n__asm__(\".arch_extension\tlse\");\n#endif', '__asm__(\".arch_extension\tlse\");')
+          c = c.replace('#ifndef __clang__\r\n__asm__(\".arch_extension\tlse\");\r\n#endif', '__asm__(\".arch_extension\tlse\");')
+          with open('arch/arm64/include/asm/lse.h', 'w') as f:
+              f.write(c)
+          "
+
+          # 7) Makefile 컴파일러 체크 무력화 및 플래그 정리
           python3 -c "import re; f=open('Makefile'); c=f.read(); f.close(); c=re.sub(r'prepare-compiler-check:\s*FORCE[\s\S]*?\t@:', 'prepare-compiler-check: FORCE\n\t@:', c).replace('-Xassembler -march=armv8-a+lse','').replace('-march=armv8-a+lse',''); f=open('Makefile','w'); f.write(c); f.close()"
 
-          # 7) 툴체인 디렉터리 내 타깃용 aarch64-linux-gnu-* 심볼릭 링크 생성 (호스트 as/ld 보존)
+          # 8) 툴체인 디렉터리 내 타깃용 aarch64-linux-gnu-* 심볼릭 링크 생성
           cd toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9/bin
           for f in aarch64-linux-android-*; do
             ln -sf "$f" "${f/aarch64-linux-android-/aarch64-linux-gnu-}"
