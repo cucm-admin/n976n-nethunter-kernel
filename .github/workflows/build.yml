@@ -41,9 +41,15 @@ jobs:
           sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' arch/arm64/configs/d2xks_defconfig
           sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' arch/arm64/configs/d2xks_defconfig
 
-          # 3) 호스트에 없는 NPU 펌웨어 빌드 차단 (make: No rule to make target NPU.bin 방지)
+          # 3) 누락된 펌웨어 빌드 차단 (NPU, TSP_SEC, KEY_STM 에러 원천 차단)
           sed -i 's/CONFIG_EXTRA_FIRMWARE="npu\/NPU.bin"/CONFIG_EXTRA_FIRMWARE=""/' arch/arm64/configs/d2xks_defconfig
-          sudo mkdir -p /lib/firmware/npu && sudo touch /lib/firmware/npu/NPU.bin
+          sed -i 's/CONFIG_FIRMWARE_IN_KERNEL=y/# CONFIG_FIRMWARE_IN_KERNEL is not set/' arch/arm64/configs/d2xks_defconfig
+          sed -i '/TOUCHSCREEN_SEC_TS_Y771/d' firmware/Makefile
+          sed -i '/KEYBOARD_STM_FSR/d' firmware/Makefile
+          mkdir -p firmware/tsp_sec firmware/key_stm firmware/npu
+          touch firmware/tsp_sec/y771_d1.bin firmware/tsp_sec/y771_d2.bin firmware/tsp_sec/y771_d1_bringup.bin firmware/tsp_sec/y771_davinci_bringup.bin firmware/tsp_sec/y771_davinci_bringup2nd.bin
+          touch firmware/key_stm/fsr1ad04_davinci.fw firmware/key_stm/fsr1ad04_d2_dv2.fw firmware/key_stm/fsr1ad04_d1.fw firmware/key_stm/fsr1ad04_d2.fw firmware/key_stm/fsr1ad04_davinci_dv1.fw firmware/key_stm/fsr1ad04_d1_dv1.fw firmware/key_stm/fsr1ad04_d1_dv2.fw
+          touch firmware/npu/NPU.bin
 
           # 4) olog.pb.h 누락 헤더 해결
           cp drivers/kperfmon/ologk.h include/linux/ologk.h
@@ -51,7 +57,7 @@ jobs:
           # 5) NPU 버전 정보 누락 파일 해결
           cp drivers/vision/npu/generated/npu-ver-info-default.c drivers/vision/npu/generated/npu-ver-info.c
 
-          # 6) 구형 툴체인 호환을 위해 LSE Atomics를 끄고 표준 ARMv8 LL/SC로 전환 (unknown pseudo-op 및 casa/ldaddal 에러 원천 해결)
+          # 6) 구형 툴체인 호환 표준 ARMv8 LL/SC 유지
           sed -i 's/CONFIG_ARM64_LSE_ATOMICS=y/# CONFIG_ARM64_LSE_ATOMICS is not set/' arch/arm64/configs/d2xks_defconfig
           sed -i 's/CONFIG_SEC_ARM64_LSE_ATOMICS=y/# CONFIG_SEC_ARM64_LSE_ATOMICS is not set/' arch/arm64/configs/d2xks_defconfig
           echo "# CONFIG_ARM64_LSE_ATOMICS is not set" >> arch/arm64/configs/d2xks_defconfig
