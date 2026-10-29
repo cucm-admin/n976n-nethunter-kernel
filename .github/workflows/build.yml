@@ -1,0 +1,44 @@
+name: Build Note 10 5G (SM-N976N) Kernel with AR9271
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: 1. 빌드 필수 패키지 설치
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libncurses5 libssl-dev bison flex libelf-dev bc ccache lz4 python3 tar
+
+      - name: 2. 커널 소스 및 툴체인 다운로드
+        run: |
+          git clone --depth=1 https://github.com/KernelKreation/exynos9820_SUSFS_kernel.git kernel
+          cd kernel
+          git clone --depth=1 https://github.com/CruelKernel/samsung-exynos9820-toolchain.git toolchain
+
+      - name: 3. AR9271 외장 무선 드라이버 설정 주입
+        run: |
+          cd kernel
+          echo "CONFIG_WIRELESS=y" >> arch/arm64/configs/d2xks_defconfig
+          echo "CONFIG_CFG80211=y" >> arch/arm64/configs/d2xks_defconfig
+          echo "CONFIG_MAC80211=y" >> arch/arm64/configs/d2xks_defconfig
+          echo "CONFIG_ATH_COMMON=y" >> arch/arm64/configs/d2xks_defconfig
+          echo "CONFIG_ATH9K_HW=y" >> arch/arm64/configs/d2xks_defconfig
+          echo "CONFIG_ATH9K_COMMON=y" >> arch/arm64/configs/d2xks_defconfig
+          echo "CONFIG_ATH9K_HTC=y" >> arch/arm64/configs/d2xks_defconfig
+          echo "CONFIG_ATH9K_HTC_DEBUGFS=y" >> arch/arm64/configs/d2xks_defconfig
+
+      - name: 4. SM-N976N 커널 컴파일 실행
+        run: |
+          cd kernel
+          chmod +x build_kernel.sh
+          ./build_kernel.sh N976N
+
+      - name: 5. 완성된 Odin 및 Boot 이미지 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: N976N_NetHunter_Kernel_Odin
+          path: kernel/out/*
