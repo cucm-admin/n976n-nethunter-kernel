@@ -51,17 +51,13 @@ jobs:
           # 5) NPU 버전 정보 누락 파일 해결
           cp drivers/vision/npu/generated/npu-ver-info-default.c drivers/vision/npu/generated/npu-ver-info.c
 
-          # 6) LSE 아토믹 어셈블러 지원 활성화 (ldaddal, casal, stadd, swpal 에러 해결)
-          python3 -c "
-          with open('arch/arm64/include/asm/lse.h', 'r') as f:
-              c = f.read()
-          c = c.replace('#ifndef __clang__\n.arch_extension\tlse\n#endif', '.arch_extension\tlse')
-          c = c.replace('#ifndef __clang__\r\n.arch_extension\tlse\r\n#endif', '.arch_extension\tlse')
-          c = c.replace('#ifndef __clang__\n__asm__(\".arch_extension\tlse\");\n#endif', '__asm__(\".arch_extension\tlse\");')
-          c = c.replace('#ifndef __clang__\r\n__asm__(\".arch_extension\tlse\");\r\n#endif', '__asm__(\".arch_extension\tlse\");')
-          with open('arch/arm64/include/asm/lse.h', 'w') as f:
-              f.write(c)
-          "
+          # 6) 구형 툴체인 호환을 위해 LSE Atomics를 끄고 표준 ARMv8 LL/SC로 전환 (unknown pseudo-op 및 casa/ldaddal 에러 원천 해결)
+          sed -i 's/CONFIG_ARM64_LSE_ATOMICS=y/# CONFIG_ARM64_LSE_ATOMICS is not set/' arch/arm64/configs/d2xks_defconfig
+          sed -i 's/CONFIG_SEC_ARM64_LSE_ATOMICS=y/# CONFIG_SEC_ARM64_LSE_ATOMICS is not set/' arch/arm64/configs/d2xks_defconfig
+          echo "# CONFIG_ARM64_LSE_ATOMICS is not set" >> arch/arm64/configs/d2xks_defconfig
+          echo "# CONFIG_SEC_ARM64_LSE_ATOMICS is not set" >> arch/arm64/configs/d2xks_defconfig
+          echo "# CONFIG_SEC_ARM64_LSE_SPINLOCK is not set" >> arch/arm64/configs/d2xks_defconfig
+          sed -i 's/#ifdef CONFIG_SEC_ARM64_LSE_SPINLOCK/#if 0/' arch/arm64/include/asm/spinlock.h
 
           # 7) Makefile 컴파일러 체크 무력화 및 플래그 정리
           python3 -c "import re; f=open('Makefile'); c=f.read(); f.close(); c=re.sub(r'prepare-compiler-check:\s*FORCE[\s\S]*?\t@:', 'prepare-compiler-check: FORCE\n\t@:', c).replace('-Xassembler -march=armv8-a+lse','').replace('-march=armv8-a+lse',''); f=open('Makefile','w'); f.write(c); f.close()"
