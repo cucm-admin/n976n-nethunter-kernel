@@ -51,7 +51,7 @@ jobs:
           # 5) NPU 버전 정보 누락 파일 해결
           cp drivers/vision/npu/generated/npu-ver-info-default.c drivers/vision/npu/generated/npu-ver-info.c
 
-          # 6) LSE 아토믹 어셈블러 지원 활성화 (Error: selected processor does not support 'casa' 해결)
+          # 6) LSE 아토믹 어셈블러 지원 활성화 (ldaddal, casal, stadd, swpal 에러 해결)
           python3 -c "
           with open('arch/arm64/include/asm/lse.h', 'r') as f:
               c = f.read()
