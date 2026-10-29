@@ -41,13 +41,14 @@ jobs:
           sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' arch/arm64/configs/d2xks_defconfig
           sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' arch/arm64/configs/d2xks_defconfig
 
-          # 3) 누락 펌웨어 폴더 및 더미 파일 생성 (Makefile 수정 없이 안전하게 해결)
+          # 3) 누락 펌웨어 폴더 및 더미 파일 생성 (sudo 권한 부여)
           sed -i 's/CONFIG_EXTRA_FIRMWARE="npu\/NPU.bin"/CONFIG_EXTRA_FIRMWARE=""/' arch/arm64/configs/d2xks_defconfig
-          mkdir -p firmware/tsp_sec firmware/key_stm firmware/npu /lib/firmware/npu
+          mkdir -p firmware/tsp_sec firmware/key_stm firmware/npu
           touch firmware/tsp_sec/y761_beyond0_phole.bin firmware/tsp_sec/y771_beyond1_phole.bin firmware/tsp_sec/y771_beyond2_phole.bin firmware/tsp_sec/y771_beyondx_phole.bin
           touch firmware/tsp_sec/y771_d1.bin firmware/tsp_sec/y771_d2.bin firmware/tsp_sec/y771_d1_bringup.bin firmware/tsp_sec/y771_davinci_bringup.bin firmware/tsp_sec/y771_davinci_bringup2nd.bin
           touch firmware/key_stm/fsr1ad04_davinci.fw firmware/key_stm/fsr1ad04_d2_dv2.fw firmware/key_stm/fsr1ad04_d1.fw firmware/key_stm/fsr1ad04_d2.fw firmware/key_stm/fsr1ad04_davinci_dv1.fw firmware/key_stm/fsr1ad04_d1_dv1.fw firmware/key_stm/fsr1ad04_d1_dv2.fw
-          touch firmware/npu/NPU.bin /lib/firmware/npu/NPU.bin
+          touch firmware/npu/NPU.bin
+          sudo mkdir -p /lib/firmware/npu && sudo touch /lib/firmware/npu/NPU.bin
 
           # 4) olog.pb.h 누락 헤더 해결
           cp drivers/kperfmon/ologk.h include/linux/ologk.h
