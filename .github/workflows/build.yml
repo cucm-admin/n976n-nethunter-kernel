@@ -11,12 +11,13 @@ jobs:
       - name: 1. 빌드 필수 패키지 설치
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libncurses5 libssl-dev bison flex libelf-dev bc ccache lz4 python3 tar
+          sudo apt-get install -y build-essential libncurses5 libssl-dev bison flex libelf-dev bc ccache lz4 python3 python-is-python3 tar git
 
-      - name: 2. 커널 소스 및 툴체인 다운로드
+      - name: 2. 커널 소스, KernelSU 및 툴체인 다운로드
         run: |
           git clone --depth=1 https://github.com/KernelKreation/exynos9820_SUSFS_kernel.git kernel
           cd kernel
+          git clone --depth=1 https://github.com/KernelSU-Next/KernelSU-Next.git KernelSU-Next
           git clone --depth=1 https://github.com/CruelKernel/samsung-exynos9820-toolchain.git toolchain
 
       - name: 3. AR9271 외장 무선 드라이버 설정 주입
