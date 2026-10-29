@@ -8,10 +8,12 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: 1. 빌드 필수 패키지 설치
+      - name: 1. 빌드 필수 패키지 설치 및 라이브러리 설정
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libncurses5 libssl-dev bison flex libelf-dev bc ccache lz4 python3 python-is-python3 tar git
+          sudo apt-get install -y build-essential libncurses5-dev libncursesw5-dev libssl-dev bison flex libelf-dev bc ccache lz4 python3 python-is-python3 tar git
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/libtinfo.so.6 /usr/lib/x86_64-linux-gnu/libtinfo.so.5 || true
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/libncurses.so.6 /usr/lib/x86_64-linux-gnu/libncurses.so.5 || true
 
       - name: 2. 커널 소스, KernelSU 및 툴체인 다운로드
         run: |
@@ -35,7 +37,14 @@ jobs:
       - name: 4. SM-N976N 커널 컴파일 실행
         run: |
           cd kernel
-          chmod +x build_kernel.sh
+          chmod -R +x .
+          export TOOLCHAIN_DIR="$(pwd)/toolchain"
+          export CLANG_DIR="$TOOLCHAIN_DIR/clang/host/linux-x86/clang-4639204-cfp-jopp"
+          export GCC_DIR="$TOOLCHAIN_DIR/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9"
+          export PATH="$CLANG_DIR/bin:$GCC_DIR/bin:$PATH"
+          export ARCH=arm64
+          export CROSS_COMPILE="$GCC_DIR/bin/aarch64-linux-android-"
+          export CC="$CLANG_DIR/bin/clang"
           ./build_kernel.sh N976N
 
       - name: 5. 완성된 Odin 및 Boot 이미지 업로드
