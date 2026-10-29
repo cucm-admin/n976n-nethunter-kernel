@@ -41,14 +41,17 @@ jobs:
           sed -i 's/CONFIG_CC_STACKPROTECTOR_STRONG=y/# CONFIG_CC_STACKPROTECTOR_STRONG is not set/' arch/arm64/configs/d2xks_defconfig
           sed -i 's/# CONFIG_CC_STACKPROTECTOR_NONE is not set/CONFIG_CC_STACKPROTECTOR_NONE=y/' arch/arm64/configs/d2xks_defconfig
 
-          # 3) LSE Atomics 비활성화 (표준 LL/SC 모드로 전환 -> ldaddal 어셈블러 에러 해결)
+          # 3) LSE Atomics 비활성화 (표준 LL/SC 모드로 전환)
           sed -i 's/CONFIG_ARM64_LSE_ATOMICS=y/# CONFIG_ARM64_LSE_ATOMICS is not set/' arch/arm64/configs/d2xks_defconfig
           sed -i 's/CONFIG_SEC_ARM64_LSE_ATOMICS=y/# CONFIG_SEC_ARM64_LSE_ATOMICS is not set/' arch/arm64/configs/d2xks_defconfig
 
-          # 4) Makefile 패치 (검사 무력화 및 하드코딩 플래그 정리)
+          # 4) olog.pb.h 누락 헤더 해결 (삼성 공식 더미 헤더로 교체)
+          cp drivers/kperfmon/ologk.h include/linux/ologk.h
+
+          # 5) Makefile 패치 (검사 무력화 및 하드코딩 플래그 정리)
           python3 -c "import re; f=open('Makefile'); c=f.read(); f.close(); c=re.sub(r'prepare-compiler-check:\s*FORCE[\s\S]*?\t@:', 'prepare-compiler-check: FORCE\n\t@:', c).replace('-Xassembler -march=armv8-a+lse','').replace('-march=armv8-a+lse',''); f=open('Makefile','w'); f.write(c); f.close()"
 
-          # 5) 툴체인 디렉터리 내 타깃용 aarch64-linux-gnu-* 심볼릭 링크 생성 (호스트 as/ld 보존)
+          # 6) 툴체인 디렉터리 내 타깃용 aarch64-linux-gnu-* 심볼릭 링크 생성 (호스트 as/ld 보존)
           cd toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9/bin
           for f in aarch64-linux-android-*; do
             ln -sf "$f" "${f/aarch64-linux-android-/aarch64-linux-gnu-}"
