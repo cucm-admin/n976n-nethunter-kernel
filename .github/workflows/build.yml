@@ -44,13 +44,11 @@ jobs:
           # 3) Makefile 패치 (검사 무력화 및 하드코딩 플래그 정리)
           python3 -c "import re; f=open('Makefile'); c=f.read(); f.close(); c=re.sub(r'prepare-compiler-check:\s*FORCE[\s\S]*?\t@:', 'prepare-compiler-check: FORCE\n\t@:', c).replace('-Xassembler -march=armv8-a+lse','').replace('-march=armv8-a+lse',''); f=open('Makefile','w'); f.write(c); f.close()"
 
-          # 4) 툴체인 디렉터리 내 ARM64 바이너리 심볼릭 링크 생성 (Clang 타깃 이름 매칭)
+          # 4) 툴체인 디렉터리 내 타깃용 aarch64-linux-gnu-* 심볼릭 링크만 생성 (호스트 as/ld는 보존)
           cd toolchain/gcc-cfp/gcc-cfp-jopp-only/aarch64-linux-android-4.9/bin
           for f in aarch64-linux-android-*; do
             ln -sf "$f" "${f/aarch64-linux-android-/aarch64-linux-gnu-}"
           done
-          ln -sf aarch64-linux-android-as as
-          ln -sf aarch64-linux-android-ld ld
           cd -
 
       - name: 4. SM-N976N 커널 컴파일 실행
